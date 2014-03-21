@@ -2,7 +2,16 @@
 
 import ply.lex as lex
 import ply.yacc as yacc
-from .model import *
+from model import *
+
+# import logging
+# logger = logging.getLogger('parser_log')
+# logger.setLevel(logging.DEBUG)
+# ch = logging.StreamHandler()
+# ch.setLevel(logging.DEBUG)
+# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# ch.setFormatter(formatter)
+# logger.addHandler(ch)
 
 class MyLexer(object):
 
@@ -100,19 +109,39 @@ class MyLexer(object):
 
 
 def accumulate_linenos(p):
+    # logger.debug("accumulate_linenos for p[0]="+str(p[0]))
+    if isinstance(p[0], str) or isinstance(p[0], int) or isinstance(p[0], dict) or p[0] is None:
+        return
+
     accumulator = set()
     for i, item in enumerate(p):
         # first one is the one that we store the new AST node in
         if i == 0:
             continue
 
-        if hasattr(item, 'lineno') and item.lineno is not None:
-            accumulator |= item.lineno
+        # propagate existing linenos from other tokens
+        if not isinstance(item, str) and not isinstance(item, int) and not isinstance(item, dict) and not item is None:
+            item_list = item if isinstance(item, list) else [item]
+            for j in item_list:
+                if hasattr(j, 'lineno') and j.lineno is not None:
+                    # logger.debug("Accumulated existing lineno in list: " + str(j.lineno))
+                    accumulator |= j.lineno
 
-    if hasattr(p[0], 'lineno') and p[0].lineno is not None:
-        p[0].lineno |= accumulator
-    else:
-        p[0].lineno = accumulator
+        # grab new ones
+        if hasattr(p, 'linespan'):
+            linespan_range = set(range(p.linespan(i)[0], p.linespan(i)[1]+1))
+            accumulator |= (linespan_range - set([0]))
+            # logger.debug("Adding line numbers in range ["+str(p.linespan(i)[0])+", "+str(p.linespan(i)[1])+"]")
+
+    ast_node_list = p[0] if isinstance(p[0], list) else [p[0]]
+    for a in ast_node_list:
+        if isinstance(a, str) or isinstance(a, int) or isinstance(a, dict) or isinstance(a, list) or a is None:
+            continue
+
+        if hasattr(a, 'lineno') and a.lineno is not None:
+            a.lineno |= accumulator
+        else:
+            a.lineno = accumulator
 
 
 class ExpressionParser(object):

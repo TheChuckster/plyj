@@ -121,6 +121,7 @@ class ExpressionParser(object):
     def p_assignment(self, p):
         '''assignment : postfix_expression assignment_operator assignment_expression'''
         p[0] = Assignment(p[2], p[1], p[3])
+        p[0].lineno = range(p.linespan(2)[0], p.linespan(2)[1]) + range(p.linespan(1)[0], p.linespan(1)[1]) + range(p.linespan(3)[0], p.linespan(3)[1])
 
     def p_assignment_operator(self, p):
         '''assignment_operator : '='
@@ -144,6 +145,7 @@ class ExpressionParser(object):
             p[0] = p[1]
         else:
             p[0] = Conditional(p[1], p[3], p[5])
+            p[0].lineno = range(p.linespan(1)[0], p.linespan(1)[1]) + range(p.linespan(3)[0], p.linespan(3)[1]) + range(p.linespan(5)[0], p.linespan(5)[1])
 
     def p_conditional_expression_not_name(self, p):
         '''conditional_expression_not_name : conditional_or_expression_not_name
@@ -153,12 +155,14 @@ class ExpressionParser(object):
             p[0] = p[1]
         else:
             p[0] = Conditional(p[1], p[3], p[5])
+            p[0].lineno = range(p.linespan(1)[0], p.linespan(1)[1]) + range(p.linespan(3)[0], p.linespan(3)[1]) + range(p.linespan(5)[0], p.linespan(5)[1])
 
     def binop(self, p, ctor):
         if len(p) == 2:
             p[0] = p[1]
         else:
             p[0] = ctor(p[2], p[1], p[3])
+            p[0].lineno = range(p.linespan(2)[0], p.linespan(2)[1]) + range(p.linespan(1)[0], p.linespan(1)[1]) + range(p.linespan(3)[0], p.linespan(3)[1])
 
     def p_conditional_or_expression(self, p):
         '''conditional_or_expression : conditional_and_expression
@@ -318,6 +322,7 @@ class ExpressionParser(object):
             p[0] = p[1]
         else:
             p[0] = Unary(p[1], p[2])
+            p[0].lineno = range(p.linespan(1)[0], p.linespan(1)[1]) + range(p.linespan(2)[0], p.linespan(2)[1])
 
     def p_unary_expression_not_name(self, p):
         '''unary_expression_not_name : pre_increment_expression
@@ -329,14 +334,17 @@ class ExpressionParser(object):
             p[0] = p[1]
         else:
             p[0] = Unary(p[1], p[2])
+            p[0].lineno = range(p.linespan(1)[0], p.linespan(1)[1]) + range(p.linespan(2)[0], p.linespan(2)[1])
 
     def p_pre_increment_expression(self, p):
         '''pre_increment_expression : PLUSPLUS unary_expression'''
         p[0] = Unary('++x', p[2])
+        p[0].lineno = range(p.linespan(2)[0], p.linespan(2)[1])
 
     def p_pre_decrement_expression(self, p):
         '''pre_decrement_expression : MINUSMINUS unary_expression'''
         p[0] = Unary('--x', p[2])
+        p[0].lineno = range(p.linespan(2)[0], p.linespan(2)[1])
 
     def p_unary_expression_not_plus_minus(self, p):
         '''unary_expression_not_plus_minus : postfix_expression
@@ -347,6 +355,7 @@ class ExpressionParser(object):
             p[0] = p[1]
         else:
             p[0] = Unary(p[1], p[2])
+            p[0].lineno = range(p.linespan(1)[0], p.linespan(1)[1]) + range(p.linespan(2)[0], p.linespan(2)[1])
 
     def p_unary_expression_not_plus_minus_not_name(self, p):
         '''unary_expression_not_plus_minus_not_name : postfix_expression_not_name
@@ -357,6 +366,7 @@ class ExpressionParser(object):
             p[0] = p[1]
         else:
             p[0] = Unary(p[1], p[2])
+            p[0].lineno = range(p.linespan(1)[0], p.linespan(1)[1]) + range(p.linespan(2)[0], p.linespan(2)[1])
 
     def p_postfix_expression(self, p):
         '''postfix_expression : primary
@@ -374,10 +384,12 @@ class ExpressionParser(object):
     def p_post_increment_expression(self, p):
         '''post_increment_expression : postfix_expression PLUSPLUS'''
         p[0] = Unary('x++', p[1])
+        p[0].lineno = range(p.linespan(1)[0], p.linespan(1)[1])
 
     def p_post_decrement_expression(self, p):
         '''post_decrement_expression : postfix_expression MINUSMINUS'''
         p[0] = Unary('x--', p[1])
+        p[0].lineno = range(p.linespan(1)[0], p.linespan(1)[1])
 
     def p_primary(self, p):
         '''primary : primary_no_new_array
@@ -412,8 +424,10 @@ class ExpressionParser(object):
                                 | primitive_type '.' CLASS'''
         if len(p) == 4:
             p[0] = ClassLiteral(Type(p[1]))
+            p[0].lineno = range(p.linespan(1)[0], p.linespan(1)[1])
         else:
             p[0] = ClassLiteral(Type(p[1], dimensions=p[2]))
+            p[0].lineno = range(p.linespan(1)[0], p.linespan(1)[1]) + range(p.linespan(2)[0], p.linespan(2)[1])
 
     def p_dims_opt(self, p):
         '''dims_opt : dims'''
@@ -442,32 +456,38 @@ class ExpressionParser(object):
     def p_cast_expression(self, p):
         '''cast_expression : '(' primitive_type dims_opt ')' unary_expression'''
         p[0] = Cast(Type(p[2], dimensions=p[3]), p[5])
+        p[0].lineno = range(p.linespan(2)[0], p.linespan(2)[1]) + range(p.linespan(3)[0], p.linespan(3)[1]) + range(p.linespan(5)[0], p.linespan(5)[1])
 
     def p_cast_expression2(self, p):
         '''cast_expression : '(' name type_arguments dims_opt ')' unary_expression_not_plus_minus'''
         p[0] = Cast(Type(p[2], type_arguments=p[3], dimensions=p[4]), p[6])
+        p[0].lineno = range(p.linespan(2)[0], p.linespan(2)[1]) + range(p.linespan(3)[0], p.linespan(3)[1]) + range(p.linespan(4)[0], p.linespan(4)[1]) + range(p.linespan(6)[0], p.linespan(6)[1])
 
     def p_cast_expression3(self, p):
         '''cast_expression : '(' name type_arguments '.' class_or_interface_type dims_opt ')' unary_expression_not_plus_minus'''
         p[5].dimensions = p[6]
         p[5].enclosed_in = Type(p[2], type_arguments=p[3])
         p[0] = Cast(p[5], p[8])
+        p[0].lineno = range(p.linespan(6)[0], p.linespan(6)[1]) + range(p.linespan(2)[0], p.linespan(2)[1]) + range(p.linespan(3)[0], p.linespan(3)[1]) + range(p.linespan(5)[0], p.linespan(5)[1]) + range(p.linespan(8)[0], p.linespan(8)[1])
 
     def p_cast_expression4(self, p):
         '''cast_expression : '(' name ')' unary_expression_not_plus_minus'''
         # technically it's not necessarily a type but could be a type parameter
         p[0] = Cast(Type(p[2]), p[4])
+        p[0].lineno = range(p.linespan(2)[0], p.linespan(2)[1]) + range(p.linespan(4)[0], p.linespan(4)[1])
 
     def p_cast_expression5(self, p):
         '''cast_expression : '(' name dims ')' unary_expression_not_plus_minus'''
         # technically it's not necessarily a type but could be a type parameter
         p[0] = Cast(Type(p[2], dimensions=p[3]), p[5])
+        p[0].lineno = range(p.linespan(2)[0], p.linespan(2)[1]) + range(p.linespan(3)[0], p.linespan(3)[1]) + range(p.linespan(5)[0], p.linespan(5)[1])
 
 class StatementParser(object):
 
     def p_block(self, p):
         '''block : '{' block_statements_opt '}' '''
         p[0] = Block(p[2])
+        p[0].lineno = range(p.linespan(2)[0], p.linespan(2)[1])
 
     def p_block_statements_opt(self, p):
         '''block_statements_opt : block_statements'''
@@ -501,10 +521,12 @@ class StatementParser(object):
     def p_local_variable_declaration(self, p):
         '''local_variable_declaration : type variable_declarators'''
         p[0] = VariableDeclaration(p[1], p[2])
+        p[0].lineno = range(p.linespan(1)[0], p.linespan(1)[1]) + range(p.linespan(2)[0], p.linespan(2)[1])
 
     def p_local_variable_declaration2(self, p):
         '''local_variable_declaration : modifiers type variable_declarators'''
         p[0] = VariableDeclaration(p[2], p[3], modifiers=p[1])
+        p[0].lineno = range(p.linespan(2)[0], p.linespan(2)[1]) + range(p.linespan(3)[0], p.linespan(3)[1]) + range(p.linespan(1)[0], p.linespan(1)[1])
 
     def p_variable_declarators(self, p):
         '''variable_declarators : variable_declarator
@@ -519,12 +541,15 @@ class StatementParser(object):
                                | variable_declarator_id '=' variable_initializer'''
         if len(p) == 2:
             p[0] = VariableDeclarator(p[1])
+            p[0].lineno = range(p.linespan(1)[0], p.linespan(1)[1])
         else:
             p[0] = VariableDeclarator(p[1], initializer=p[3])
+            p[0].lineno = range(p.linespan(1)[0], p.linespan(1)[1]) + range(p.linespan(3)[0], p.linespan(3)[1])
 
     def p_variable_declarator_id(self, p):
         '''variable_declarator_id : NAME dims_opt'''
         p[0] = Variable(p[1], dimensions=p[2])
+        p[0].lineno = range(p.linespan(1)[0], p.linespan(1)[1]) + range(p.linespan(2)[0], p.linespan(2)[1])
 
     def p_variable_initializer(self, p):
         '''variable_initializer : expression
@@ -585,6 +610,7 @@ class StatementParser(object):
         '''array_initializer : '{' variable_initializers '}'
                              | '{' variable_initializers ',' '}' '''
         p[0] = ArrayInitializer(p[2])
+        p[0].lineno = range(p.linespan(2)[0], p.linespan(2)[1])
 
     def p_variable_initializers(self, p):
         '''variable_initializers : variable_initializer
@@ -597,18 +623,21 @@ class StatementParser(object):
     def p_method_invocation(self, p):
         '''method_invocation : NAME '(' argument_list_opt ')' '''
         p[0] = MethodInvocation(p[1], arguments=p[3])
+        p[0].lineno = range(p.linespan(1)[0], p.linespan(1)[1]) + range(p.linespan(3)[0], p.linespan(3)[1])
 
     def p_method_invocation2(self, p):
         '''method_invocation : name '.' type_arguments NAME '(' argument_list_opt ')'
                              | primary '.' type_arguments NAME '(' argument_list_opt ')'
                              | SUPER '.' type_arguments NAME '(' argument_list_opt ')' '''
         p[0] = MethodInvocation(p[4], target=p[1], type_arguments=p[3], arguments=p[6])
+        p[0].lineno = range(p.linespan(4)[0], p.linespan(4)[1]) + range(p.linespan(1)[0], p.linespan(1)[1]) + range(p.linespan(3)[0], p.linespan(3)[1]) + range(p.linespan(6)[0], p.linespan(6)[1])
 
     def p_method_invocation3(self, p):
         '''method_invocation : name '.' NAME '(' argument_list_opt ')'
                              | primary '.' NAME '(' argument_list_opt ')'
                              | SUPER '.' NAME '(' argument_list_opt ')' '''
         p[0] = MethodInvocation(p[3], target=p[1], arguments=p[5])
+        p[0].lineno = range(p.linespan(3)[0], p.linespan(3)[1]) + range(p.linespan(1)[0], p.linespan(1)[1]) + range(p.linespan(5)[0], p.linespan(5)[1])
 
     def p_labeled_statement(self, p):
         '''labeled_statement : label ':' statement'''
@@ -627,30 +656,37 @@ class StatementParser(object):
     def p_if_then_statement(self, p):
         '''if_then_statement : IF '(' expression ')' statement'''
         p[0] = IfThenElse(p[3], p[5])
+        p[0].lineno = range(p.linespan(3)[0], p.linespan(3)[1]) + range(p.linespan(5)[0], p.linespan(5)[1])
 
     def p_if_then_else_statement(self, p):
         '''if_then_else_statement : IF '(' expression ')' statement_no_short_if ELSE statement'''
         p[0] = IfThenElse(p[3], p[5], p[7])
+        p[0].lineno = range(p.linespan(3)[0], p.linespan(3)[1]) + range(p.linespan(5)[0], p.linespan(5)[1]) + range(p.linespan(7)[0], p.linespan(7)[1])
 
     def p_if_then_else_statement_no_short_if(self, p):
         '''if_then_else_statement_no_short_if : IF '(' expression ')' statement_no_short_if ELSE statement_no_short_if'''
         p[0] = IfThenElse(p[3], p[5], p[7])
+        p[0].lineno = range(p.linespan(3)[0], p.linespan(3)[1]) + range(p.linespan(5)[0], p.linespan(5)[1]) + range(p.linespan(7)[0], p.linespan(7)[1])
 
     def p_while_statement(self, p):
         '''while_statement : WHILE '(' expression ')' statement'''
         p[0] = While(p[3], p[5])
+        p[0].lineno = range(p.linespan(3)[0], p.linespan(3)[1]) + range(p.linespan(5)[0], p.linespan(5)[1])
 
     def p_while_statement_no_short_if(self, p):
         '''while_statement_no_short_if : WHILE '(' expression ')' statement_no_short_if'''
         p[0] = While(p[3], p[5])
+        p[0].lineno = range(p.linespan(3)[0], p.linespan(3)[1]) + range(p.linespan(5)[0], p.linespan(5)[1])
 
     def p_for_statement(self, p):
         '''for_statement : FOR '(' for_init_opt ';' expression_opt ';' for_update_opt ')' statement'''
         p[0] = For(p[3], p[5], p[7], p[9])
+        p[0].lineno = range(p.linespan(3)[0], p.linespan(3)[1]) + range(p.linespan(5)[0], p.linespan(5)[1]) + range(p.linespan(7)[0], p.linespan(7)[1]) + range(p.linespan(9)[0], p.linespan(9)[1])
 
     def p_for_statement_no_short_if(self, p):
         '''for_statement_no_short_if : FOR '(' for_init_opt ';' expression_opt ';' for_update_opt ')' statement_no_short_if'''
         p[0] = For(p[3], p[5], p[7], p[9])
+        p[0].lineno = range(p.linespan(3)[0], p.linespan(3)[1]) + range(p.linespan(5)[0], p.linespan(5)[1]) + range(p.linespan(7)[0], p.linespan(7)[1]) + range(p.linespan(9)[0], p.linespan(9)[1])
 
     def p_for_init_opt(self, p):
         '''for_init_opt : for_init
@@ -699,11 +735,11 @@ class StatementParser(object):
 
     def p_enhanced_for_statement_header_init(self, p):
         '''enhanced_for_statement_header_init : FOR '(' type NAME dims_opt'''
-        p[0] = {'modifiers': [], 'type': p[3], 'variable': Variable(p[4], dimensions=p[5])}
+        p[0] = {'modifiers': [], 'type': p[3], 'variable': Variable(p[4], dimensions=p[5])}  # TODO: there's an AST node class here, should we be grabbing it for the line numbers?
 
     def p_enhanced_for_statement_header_init2(self, p):
         '''enhanced_for_statement_header_init : FOR '(' modifiers type NAME dims_opt'''
-        p[0] = {'modifiers': p[3], 'type': p[4], 'variable': Variable(p[5], dimensions=p[6])}
+        p[0] = {'modifiers': p[3], 'type': p[4], 'variable': Variable(p[5], dimensions=p[6])}  # TODO: there's an AST node class here, should we be grabbing it for the line numbers?
 
     def p_statement_no_short_if(self, p):
         '''statement_no_short_if : statement_without_trailing_substatement

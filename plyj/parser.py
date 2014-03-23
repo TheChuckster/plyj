@@ -100,7 +100,7 @@ class MyLexer(object):
 
 
 def accumulate_linenos(p):
-    if isinstance(p[0], str) or isinstance(p[0], int) or isinstance(p[0], dict) or isinstance(p[0], list) or p[0] is None:
+    if isinstance(p[0], str) or isinstance(p[0], int) or isinstance(p[0], dict) or isinstance(p[0], list) or isinstance(p[0], tuple) or p[0] is None:
         return
 
     accumulator = set()
@@ -110,7 +110,7 @@ def accumulate_linenos(p):
 
         # propagate existing linenos from other tokens
         if not isinstance(item, str) and not isinstance(item, int) and not isinstance(item, dict) and not item is None:
-            item_list = item if isinstance(item, list) else [item]
+            item_list = item if isinstance(item, list) else (list(item) if isinstance(item, tuple) else [item])
             for j in item_list:
                 if hasattr(j, 'lineno') and j.lineno is not None:
                     accumulator |= j.lineno 

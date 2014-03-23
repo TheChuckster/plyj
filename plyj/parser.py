@@ -2,10 +2,7 @@
 
 import ply.lex as lex
 import ply.yacc as yacc
-from model import *
-
-import logging
-logger = logging.getLogger('parser_log')
+from .model import *
 
 class MyLexer(object):
 
@@ -103,15 +100,12 @@ class MyLexer(object):
 
 
 def accumulate_linenos(p):
-    logger.debug("accumulate_linenos for p[0]="+str(p[0]))
-
-    if isinstance(p[0], str) or isinstance(p[0], int) or isinstance(p[0], dict) or p[0] is None:
+    if isinstance(p[0], str) or isinstance(p[0], int) or isinstance(p[0], dict) or isinstance(p[0], list) or p[0] is None:
         return
 
     accumulator = set()
     for i, item in enumerate(p):
-        # first one is the one that we store the new AST node in
-        if i == 0:
+        if i == 0:  # first one is the one that we store the new AST node in
             continue
 
         # propagate existing linenos from other tokens
@@ -119,50 +113,17 @@ def accumulate_linenos(p):
             item_list = item if isinstance(item, list) else [item]
             for j in item_list:
                 if hasattr(j, 'lineno') and j.lineno is not None:
-                    # logger.debug("Accumulated existing lineno in list: " + str(j.lineno))
-                    logger.debug("adding linenos "+str(j.lineno)+" for token "+str(j))
                     accumulator |= j.lineno 
-                    logger.debug("accumulator="+str(accumulator))
 
         # grab new ones
         if hasattr(p, 'linespan'):
             linespan_range = set(range(p.linespan(i)[0], p.linespan(i)[1]+1))
-            logger.debug("adding linespan range ("+str(p.linespan(i)[0])+", "+str(p.linespan(i)[1])+") for token "+str(item))
             accumulator |= (linespan_range - set([0]))
-            logger.debug("accumulator="+str(accumulator))
-            # logger.debug("Adding line numbers in range ["+str(p.linespan(i)[0])+", "+str(p.linespan(i)[1])+"]")
-
-    logger.debug("FINAL accumulator="+str(accumulator))
-
-    if isinstance(p[0], list):
-        return
 
     if hasattr(p[0], 'lineno') and p[0].lineno is not None:
-        logger.debug("Accumulating linenos to p[0]="+str(p[0]))
         p[0].lineno |= accumulator
     else:
-        logger.debug("Setting linenos in p[0] to: "+str(p[0]))
-        p[0].lineno = accumulator        
-
-    if p[0].__class__.__name__ == 'MethodDeclaration' and hasattr(p[0], 'name') and p[0].name == 'greater':
-        logger.debug('BOGEY: p[0]='+str(p[0])+'; p[0].lineno='+str(p[0].lineno))
-
-    # ast_node_list = p[0] if isinstance(p[0], list) else [p[0]]
-    # for a in ast_node_list:
-    #     if isinstance(a, str) or isinstance(a, int) or isinstance(a, dict) or isinstance(a, list) or a is None:
-    #         continue
-
-    #     if hasattr(a, 'lineno') and a.lineno is not None:
-    #         logger.debug("Accumulating linenos to ast_node_list entry a="+str(a))
-    #         a.lineno |= accumulator
-    #     else:
-    #         logger.debug("Setting linenos in ast_node_list entry a to: "+str(a))
-    #         a.lineno = accumulator
-
-    #     if a.__class__.__name__ == 'MethodDeclaration' and hasattr(a, 'name') and a.name == 'greater':
-    #         logger.debug('BOGEY: a='+str(a)+'; a.lineno='+str(a.lineno))
-
-    # logger.debug("FINAL lineno="+str(filter(None, [a.lineno if hasattr(a, 'lineno') else None for a in ast_node_list])))
+        p[0].lineno = accumulator
 
 
 class ExpressionParser(object):

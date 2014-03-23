@@ -97,16 +97,11 @@ def map_traverse_up(node, fn, child_node=None):
 
 
 def lineno_mapper(node, child):
-    if node is None or child is None:
+    if node is None or child is None:  # SUBTLETY: have to return node instead of None here to ensure we're not clobbing nodes with no children!
         return node
 
     if hasattr(node, 'lineno') and hasattr(child, 'lineno'):
-        print "Adding lineno: node.lineno="+str(node.lineno)+"; child.lineno" + str(child.lineno)
         node.lineno |= child.lineno
-    else:
-        logger.debug("WTF!")
-        logger.debug("node="+str(node))
-        logger.debug("child="+str(child))
 
     return node
 
@@ -120,8 +115,10 @@ def main():
     parser = plyj.Parser()
     for filename in sys.argv[1:]:
         parsed = parser.parse_file(filename)
-        #logger.debug(parsed)
+        
+        # logger.debug(parsed)
         # print(parsed.__dict__)
+        
         t = java_ply_adapter(parsed)
         t = add_parents(t)
         bottom_up_map(t, lambda x, y: lineno_mapper(x, y))
